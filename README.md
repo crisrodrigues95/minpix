@@ -1,112 +1,67 @@
-# Minpix - API de Contas Bancárias
+# Minpix
 
-## Visão geral
-O Minpix é uma API REST para gestão de contas bancárias, com foco em segurança, organização da lógica de negócio e clareza na separação entre camadas da aplicação.
+Minpix é um projeto Java em desenvolvimento para representar operações e dados relacionados a contas bancárias e ao Pix.
 
-A solução foi pensada para seguir um fluxo simples e estruturado:
+## Estado atual
 
-- autenticação via Auth0
-- validação de token JWT
-- processamento nas camadas Controller, Service e Repository
-- regras de negócio para contas bancárias
+O projeto possui entidades JPA para contas, chaves Pix, favorecidos, transferências e comprovantes, além de repositórios Spring Data JPA e serviços com operações básicas de cadastro, consulta, atualização e exclusão.
 
-## Regras de negócio
-- Todas as contas possuem saldo e limite diário.
-- Nome do titular e CPF são obrigatórios.
-- Somente usuários autenticados podem acessar a API.
-- Saldo e limite diário devem ser valores positivos.
-- O cliente deve enviar o token no header da requisição para acessar endpoints protegidos.
+O `ContaService` também preenche a data de cadastro ao criar uma conta. Os serviços de transferência, chave Pix, favorecido e comprovante fazem operações de persistência; eles ainda não executam regras de negócio de uma transferência Pix.
 
-## Fluxo da aplicação
+**A API HTTP ainda não está implementada:** não há controllers nem rotas REST no código atual. Portanto, os serviços não podem ser chamados por endpoints como `GET /contas` ou `POST /contas`.
 
-```mermaid
-flowchart LR
-    A[Usuário] -->|1. Login com Auth0| B[Auth0]
-    B -->|2. Retorna JWT| C[Cliente]
-    C -->|3. Envia requisição com token| D[Controller]
-    D -->|4. Valida token| E[Service]
-    E -->|5. Aplica regras de negócio| F[Repository]
-    F -->|6. Acesso aos dados| G[Persistência]
-```
-
-## Arquitetura
-A aplicação foi organizada em camadas para facilitar manutenção e evolução:
-
-- Controller: recebe as requisições HTTP e encaminha para a camada de serviço.
-- Service: executa as regras de negócio e validações da aplicação.
-- Repository: realiza acesso aos dados e comunicação com a persistência.
-
-## Segurança
-A API exige autenticação por token JWT para acesso às operações protegidas. Esse mecanismo garante que apenas usuários autorizados consigam consultar ou manipular informações sensíveis relacionadas às contas.
+Também não estão configurados autenticação Auth0/JWT nem validações de regras como saldo positivo, limite diário ou obrigatoriedade de campos. Essas funcionalidades não devem ser consideradas disponíveis.
 
 ## Tecnologias
+
 - Java 21
-- Spring Boot 3 / 4
+- Spring Boot 4.1.2
 - Maven
-- Auth0 para autenticação
-- JWT para validação de acesso
+- Spring Data JPA
+- H2 como dependência de runtime
+- Springdoc OpenAPI como dependência
+- Lombok
 
-## Estrutura do projeto
+O arquivo `application.properties` configura apenas o nome da aplicação. Não há configuração de banco externo; com a dependência H2, a aplicação usa a configuração padrão para banco embarcado, cujos dados são voláteis. Embora Springdoc esteja incluído, ainda não há controllers com endpoints para documentar.
 
-```text
-minpix/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/example/minpix/
-│   │   │       └── MinpixApplication.java
-│   │   └── resources/
-│   └── test/
-│       └── java/
-│           └── com/example/minpix/
-├── pom.xml
-├── mvnw
-├── mvnw.cmd
-├── .gitignore
-├── HELP.md
-└── README.md
-```
+## Estrutura
 
-## Como executar o projeto
+- `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).
+- `repositories`: interfaces Spring Data JPA para persistência.
+- `services`: operações de acesso e manutenção das entidades.
+- `MinpixApplication`: ponto de entrada Spring Boot.
 
-### Pré-requisitos
-- Java 21+
-- Maven
-- Git
+## Pré-requisitos
 
-### Executando localmente
-No diretório raiz do projeto, execute:
+- JDK 21 ou superior.
+- Maven instalado, ou use o Maven Wrapper incluído no projeto.
+
+## Executar
+
+Na raiz do projeto:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Ou, se estiver usando o Maven instalado globalmente:
+Ou, com Maven instalado:
 
 ```bash
 mvn spring-boot:run
 ```
 
-A aplicação iniciará em um servidor local, normalmente na porta padrão do Spring Boot:
+O Spring Boot usa a porta padrão `8080`, salvo configuração diferente. Como não há controllers, iniciar a aplicação não disponibiliza atualmente endpoints de negócio.
 
-```text
-http://localhost:8080
+## Testes
+
+Execute os testes com:
+
+```bash
+./mvnw test
 ```
 
-## Endpoints
-A API ainda pode ser expandida com endpoints como:
+O teste existente verifica se o contexto Spring da aplicação é carregado.
 
-- `POST /login` - autenticação do usuário
-- `GET /contas` - listagem de contas
-- `GET /contas/{id}` - busca por conta específica
-- `POST /contas` - criação de conta
-- `PUT /contas/{id}` - atualização de conta
-- `DELETE /contas/{id}` - exclusão da conta
+## Próximos passos
 
-> Os endpoints e regras de payload podem ser ajustados de acordo com a evolução da aplicação.
-
-## Observações
-Este projeto foi estruturado como base para uma API bancária moderna, com foco em segurança, autenticidade e organização por responsabilidade de camada. A arquitetura permite evoluir facilmente para inclusão de banco de dados, testes automatizados e novos módulos.
-
-## Licença
-Este projeto está em desenvolvimento e pode ser adaptado conforme as necessidades do time e do cliente.
+Para disponibilizar uma API utilizável, será necessário criar controllers REST e definir contratos de requisição/resposta. Autenticação, validação, regras de transferência Pix e configuração de persistência adequada a cada ambiente também precisam ser implementadas antes de serem anunciadas como funcionalidades.
