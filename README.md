@@ -1,35 +1,43 @@
 # Minpix
 
-Minpix é um projeto Java em desenvolvimento para representar operações e dados relacionados a contas bancárias e ao Pix.
+Minpix é uma aplicação Java com Spring Boot para cadastro e consulta de contas bancárias, chaves Pix, favorecidos, transferências Pix e comprovantes. O projeto disponibiliza uma API REST com operações CRUD para essas entidades.
 
-## Estado atual
+## Situação atual
 
-O projeto possui entidades JPA para contas, chaves Pix, favorecidos, transferências e comprovantes, além de repositórios Spring Data JPA e serviços com operações básicas de cadastro, consulta, atualização e exclusão.
+Estão implementados:
 
-O `ContaService` também preenche a data de cadastro ao criar uma conta. Os serviços de transferência, chave Pix, favorecido e comprovante fazem operações de persistência; eles ainda não executam regras de negócio de uma transferência Pix.
+- Entidades JPA e repositórios Spring Data JPA para contas, chaves Pix, favorecidos, transferências Pix e comprovantes.
+- Serviços de persistência e controllers REST para listar, consultar por ID, cadastrar, atualizar e excluir registros.
+- Documentação OpenAPI/Swagger dos endpoints.
+- Cadastro de conta com preenchimento automático da data de cadastro.
 
-**A API HTTP ainda não está implementada:** não há controllers nem rotas REST no código atual. Portanto, os serviços não podem ser chamados por endpoints como `GET /contas` ou `POST /contas`.
+As operações de transferência Pix atualmente apenas persistem os dados informados: não movimentam saldo, verificam limites, executam agendamentos nem integram com a infraestrutura do Pix. As demais datas, status e relacionamentos também precisam ser informados conforme os dados aceitos pelas entidades; não há regras gerais que os preencham automaticamente.
 
-Também não estão configurados autenticação Auth0/JWT nem validações de regras como saldo positivo, limite diário ou obrigatoriedade de campos. Essas funcionalidades não devem ser consideradas disponíveis.
+Os endpoints recebem e retornam as próprias entidades. Embora a dependência de Bean Validation esteja incluída, os controllers não usam `@Valid` e as entidades não definem restrições de validação. Também não há autenticação/autorização, DTOs ou regras completas de negócio. A aplicação é um projeto em desenvolvimento e não deve ser usada em produção ou com dados financeiros reais.
 
-## Tecnologias
+## API REST
 
-- Java 21
-- Spring Boot 4.1.2
-- Maven
-- Spring Data JPA
-- H2 como dependência de runtime
-- Springdoc OpenAPI como dependência
-- Lombok
+Todos os recursos abaixo oferecem:
 
-O arquivo `application.properties` configura apenas o nome da aplicação. Não há configuração de banco externo; com a dependência H2, a aplicação usa a configuração padrão para banco embarcado, cujos dados são voláteis. Embora Springdoc esteja incluído, ainda não há controllers com endpoints para documentar.
+| Operação | Método e caminho | Resposta esperada |
+|---|---|---|
+| Listar | `GET /{recurso}` | `200 OK` com a lista |
+| Consultar por ID | `GET /{recurso}/{id}` | `200 OK` ou `404 Not Found` |
+| Cadastrar | `POST /{recurso}` | `201 Created` |
+| Atualizar | `PUT /{recurso}/{id}` | `200 OK` ou `404 Not Found` |
+| Excluir | `DELETE /{recurso}/{id}` | `204 No Content` ou `404 Not Found` |
 
-## Estrutura
+Os recursos disponíveis são:
 
-- `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).
-- `repositories`: interfaces Spring Data JPA para persistência.
-- `services`: operações de acesso e manutenção das entidades.
-- `MinpixApplication`: ponto de entrada Spring Boot.
+| Recurso | Caminho |
+|---|---|
+| Contas | `/contas` |
+| Chaves Pix | `/chaves-pix` |
+| Favorecidos | `/favorecidos` |
+| Transferências Pix | `/transferencias-pix` |
+| Comprovantes | `/comprovantes` |
+
+Os corpos de cadastro e atualização são JSON com os campos das respectivas entidades. A documentação interativa do Swagger UI fica em `http://localhost:8080/swagger-ui/index.html`, e o documento OpenAPI em `http://localhost:8080/v3/api-docs`, após iniciar a aplicação.
 
 ## Modelo de dados
 
@@ -37,9 +45,39 @@ O diagrama a seguir apresenta o modelo entidade-relacionamento do projeto e os v
 
 ![Diagrama entidade-relacionamento do Minpix](docs/MER.png)
 
+## Tecnologias
+
+- Java 21
+- Spring Boot 4.1.2
+- Maven
+- Spring Web
+- Spring Data JPA e Hibernate
+- PostgreSQL (banco configurado para execução)
+- H2 (dependência de runtime, não selecionada pela configuração atual)
+- Springdoc OpenAPI
+- Jakarta Bean Validation (dependência incluída; validações de entrada ainda não estão aplicadas)
+- Lombok
+
+## Configuração do banco de dados
+
+A configuração em [`application.properties`](src/main/resources/application.properties) aponta para um PostgreSQL local, na porta `5432`, com o banco `banco_contas`. Antes de executar a aplicação ou os testes, inicie o PostgreSQL, crie esse banco e configure credenciais válidas no arquivo de propriedades. Não publique senhas ou outras credenciais no repositório.
+
+O Hibernate está configurado com `ddl-auto=update`, que atualiza o esquema das tabelas durante a inicialização. O SQL também é exibido no log. Essa configuração é conveniente durante o desenvolvimento, mas deve ser revista antes de qualquer implantação.
+
+## Estrutura do projeto
+
+- `controller`: endpoints REST.
+- `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).
+- `repositories`: interfaces Spring Data JPA para persistência.
+- `services`: operações de acesso e manutenção das entidades.
+- `src/main/resources`: configuração da aplicação.
+- `src/test`: testes automatizados.
+- `MinpixApplication`: ponto de entrada Spring Boot.
+
 ## Pré-requisitos
 
 - JDK 21 ou superior.
+- PostgreSQL local configurado conforme a seção anterior.
 - Maven instalado, ou use o Maven Wrapper incluído no projeto.
 
 ## Executar
@@ -56,7 +94,7 @@ Ou, com Maven instalado:
 mvn spring-boot:run
 ```
 
-O Spring Boot usa a porta padrão `8080`, salvo configuração diferente. Como não há controllers, iniciar a aplicação não disponibiliza atualmente endpoints de negócio.
+A aplicação usa a porta padrão `8080`, salvo configuração diferente.
 
 ## Testes
 
@@ -66,8 +104,12 @@ Execute os testes com:
 ./mvnw test
 ```
 
-O teste existente verifica se o contexto Spring da aplicação é carregado.
+O teste existente verifica se o contexto Spring é carregado. Como a configuração de datasource aponta para PostgreSQL, o banco e as credenciais precisam estar disponíveis também durante a execução dos testes.
 
-## Próximos passos
+## Limitações e próximos passos
 
-Para disponibilizar uma API utilizável, será necessário criar controllers REST e definir contratos de requisição/resposta. Autenticação, validação, regras de transferência Pix e configuração de persistência adequada a cada ambiente também precisam ser implementadas antes de serem anunciadas como funcionalidades.
+- Aplicar autenticação e autorização e definir a proteção adequada dos dados das contas.
+- Criar DTOs e validação de entrada para não expor as entidades diretamente na API.
+- Implementar as regras de negócio da transferência Pix, incluindo saldo, limites, agendamento e atualização de status.
+- Externalizar as configurações e credenciais do banco e definir uma estratégia de migração do esquema.
+- Ampliar a cobertura de testes para os endpoints, validações e regras de negócio.
