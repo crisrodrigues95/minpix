@@ -31,6 +31,12 @@ O arquivo `application.properties` configura apenas o nome da aplicação. Não 
 - `services`: operações de acesso e manutenção das entidades.
 - `MinpixApplication`: ponto de entrada Spring Boot.
 
+## Modelo de dados
+
+O diagrama a seguir apresenta o modelo entidade-relacionamento do projeto e os vínculos entre contas, chaves Pix, favorecidos, transferências e comprovantes.
+
+![Diagrama entidade-relacionamento do Minpix](docs/MER.png)
+
 ## Pré-requisitos
 
 - JDK 21 ou superior.
