@@ -1,4 +1,4 @@
-package com.example.minpix.controller;
+package com.example.minpix.controllers;
 
 
 import com.example.minpix.models.Favorecido;

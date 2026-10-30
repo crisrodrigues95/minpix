@@ -1,4 +1,4 @@
-package com.example.minpix.controller;
+package com.example.minpix.controllers;
 
 
 

@@ -13,7 +13,7 @@ Estão implementados:
 
 As operações de transferência Pix atualmente apenas persistem os dados informados: não movimentam saldo, verificam limites, executam agendamentos nem integram com a infraestrutura do Pix. As demais datas, status e relacionamentos também precisam ser informados conforme os dados aceitos pelas entidades; não há regras gerais que os preencham automaticamente.
 
-Os endpoints recebem e retornam as próprias entidades. Embora a dependência de Bean Validation esteja incluída, os controllers não usam `@Valid` e as entidades não definem restrições de validação. Também não há autenticação/autorização, DTOs ou regras completas de negócio. A aplicação é um projeto em desenvolvimento e não deve ser usada em produção ou com dados financeiros reais.
+Os endpoints recebem e retornam as próprias entidades. Embora a dependência de Bean Validation esteja incluída, os controllers não usam `@Valid` e as entidades não definem restrições de validação. A aplicação exige um JWT emitido pelo Auth0 nas rotas REST, mas ainda não valida o audience configurado; portanto, a proteção está incompleta. Também não há DTOs nem regras completas de negócio. A aplicação é um projeto em desenvolvimento e não deve ser usada em produção ou com dados financeiros reais.
 
 ## API REST
 
@@ -37,7 +37,17 @@ Os recursos disponíveis são:
 | Transferências Pix | `/transferencias-pix` |
 | Comprovantes | `/comprovantes` |
 
-Os corpos de cadastro e atualização são JSON com os campos das respectivas entidades. A documentação interativa do Swagger UI fica em `http://localhost:8080/swagger-ui/index.html`, e o documento OpenAPI em `http://localhost:8080/v3/api-docs`, após iniciar a aplicação.
+Os corpos de cadastro e atualização são JSON com os campos das respectivas entidades. A documentação interativa do Swagger UI fica em `http://localhost:8080/swagger-ui/index.html`, e o documento OpenAPI em `http://localhost:8080/v3/api-docs`, após iniciar a aplicação. O Swagger UI e o documento OpenAPI podem ser abertos sem token; para executar operações da API pelo Swagger, use **Authorize** e informe um access token do Auth0.
+
+### Auth0 e teste no Postman
+
+1. No Auth0, registre uma API e configure seu **Identifier**. O valor deve corresponder a `auth0.audience` em `application.properties`.
+2. Crie ou selecione uma aplicação **Machine to Machine** e autorize-a a acessar essa API.
+3. Configure `spring.security.oauth2.resourceserver.jwt.issuer-uri` com o domínio do tenant Auth0, incluindo `https://` e a barra final. Não use o Client ID, Client Secret ou o Identifier da API nesse campo.
+4. No Postman, solicite um token com o fluxo **Client Credentials**. Use `https://SEU-DOMINIO/oauth/token` como URL do token, as credenciais da aplicação M2M e o Identifier da API como **Audience**. Mantenha o Client Secret fora do repositório.
+5. Envie o `access_token` como **Bearer Token** em uma chamada, por exemplo `GET http://localhost:8080/contas`.
+
+**Limitação da configuração atual:** `auth0.audience` está definido, mas não é usado pelo `JwtDecoder`; o código valida o emissor/assinatura, mas não confirma se o token foi emitido para o Identifier desta API. Além disso, `POST /auth/login` exige autenticação e emite um JWT local que não é aceito pelo validador configurado para Auth0. Portanto, esse endpoint não é atualmente um fluxo de login utilizável.
 
 ## Modelo de dados
 
@@ -66,7 +76,7 @@ O Hibernate está configurado com `ddl-auto=update`, que atualiza o esquema das 
 
 ## Estrutura do projeto
 
-- `controller`: endpoints REST.
+- `controllers`: endpoints REST.
 - `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).
 - `repositories`: interfaces Spring Data JPA para persistência.
 - `services`: operações de acesso e manutenção das entidades.
@@ -108,7 +118,8 @@ O teste existente verifica se o contexto Spring é carregado. Como a configuraç
 
 ## Limitações e próximos passos
 
-- Aplicar autenticação e autorização e definir a proteção adequada dos dados das contas.
+- Validar o audience dos tokens Auth0 e definir autorização por escopos/recursos.
+- Remover ou integrar corretamente o endpoint de login local ao fluxo de autenticação escolhido.
 - Criar DTOs e validação de entrada para não expor as entidades diretamente na API.
 - Implementar as regras de negócio da transferência Pix, incluindo saldo, limites, agendamento e atualização de status.
 - Externalizar as configurações e credenciais do banco e definir uma estratégia de migração do esquema.
