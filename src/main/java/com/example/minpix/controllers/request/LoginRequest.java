@@ -1,6 +1,6 @@
 package com.example.minpix.controllers.request;
 
-
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +8,10 @@ import lombok.Setter;
 @Setter
 public class LoginRequest {
 
+    @NotBlank
     private String numeroConta;
+
+    @NotBlank
     private String senha;
 
     public String getNumeroConta() {

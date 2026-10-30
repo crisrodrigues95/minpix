@@ -36,7 +36,7 @@ public class Conta {
     @Column(name = "nome_titular")
     private String nomeTitular;
 
-    @Schema(description = "CPF do titular", example = "123.456.789-00")
+    @Schema(description = "CPF do titular", example = "529.982.247-25")
     private String cpf;
 
     @Schema(description = "Nome do banco", example = "Banco XPTO")

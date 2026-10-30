@@ -6,7 +6,7 @@ import com.example.minpix.controllers.request.LoginRequest;
 import com.example.minpix.models.Conta;
 import com.example.minpix.repositories.ContaRepository;
 import com.example.minpix.services.JwtService;
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,7 +29,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestBody LoginRequest request) {
+    public String login(@Valid @RequestBody LoginRequest request) {
 
         Conta conta = repository.findByNumeroConta(request.getNumeroConta())
                 .orElseThrow(() ->

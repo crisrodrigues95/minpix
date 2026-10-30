@@ -4,18 +4,20 @@ package com.example.minpix.services;
 
 import com.example.minpix.models.Conta;
 import com.example.minpix.repositories.ContaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.example.minpix.exceptions.DuplicateAccountNumberException;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 public class ContaService {
 
-    @Autowired
-    private ContaRepository contaRepository;
+    private final ContaRepository contaRepository;
+
+    public ContaService(ContaRepository contaRepository) {
+        this.contaRepository = contaRepository;
+    }
 /*
     public Conta getContaSample(){
 
@@ -36,6 +38,10 @@ public class ContaService {
     }*/
 
     public Conta criarConta(Conta conta) {
+
+        if (contaRepository.existsByNumeroConta(conta.getNumeroConta())) {
+            throw new DuplicateAccountNumberException(conta.getNumeroConta());
+        }
 
         conta.setDataCadastro(LocalDate.now());
 
@@ -58,7 +64,12 @@ public class ContaService {
             return null;
         }
 
+        if (contaRepository.existsByNumeroContaAndIdNot(contaAtualizada.getNumeroConta(), id)) {
+            throw new DuplicateAccountNumberException(contaAtualizada.getNumeroConta());
+        }
+
         contaAtualizada.setId(id);
+        contaAtualizada.setDataCadastro(conta.getDataCadastro());
 
         return contaRepository.save(contaAtualizada);
     }

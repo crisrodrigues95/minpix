@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Relatórios locais de mudanças
+/docs/relatorios/

@@ -9,11 +9,11 @@ Estão implementados:
 - Entidades JPA e repositórios Spring Data JPA para contas, chaves Pix, favorecidos, transferências Pix e comprovantes.
 - Serviços de persistência e controllers REST para listar, consultar por ID, cadastrar, atualizar e excluir registros.
 - Documentação OpenAPI/Swagger dos endpoints.
-- Cadastro de conta com preenchimento automático da data de cadastro.
+- Cadastro de conta, chave Pix e favorecido com preenchimento automático da data de cadastro.
 
-As operações de transferência Pix atualmente apenas persistem os dados informados: não movimentam saldo, verificam limites, executam agendamentos nem integram com a infraestrutura do Pix. As demais datas, status e relacionamentos também precisam ser informados conforme os dados aceitos pelas entidades; não há regras gerais que os preencham automaticamente.
+As operações de transferência Pix atualmente apenas persistem os dados informados: não movimentam saldo, verificam limites, executam agendamentos nem integram com a infraestrutura do Pix. Datas, status e relacionamentos de transferências e comprovantes precisam ser informados; não há regras gerais que os preencham automaticamente.
 
-Os endpoints recebem e retornam as próprias entidades. Embora a dependência de Bean Validation esteja incluída, os controllers não usam `@Valid` e as entidades não definem restrições de validação. A aplicação exige um JWT emitido pelo Auth0 nas rotas REST, mas ainda não valida o audience configurado; portanto, a proteção está incompleta. Também não há DTOs nem regras completas de negócio. A aplicação é um projeto em desenvolvimento e não deve ser usada em produção ou com dados financeiros reais.
+Os endpoints usam DTOs para entrada e saída, sem expor diretamente as entidades JPA nem a senha das contas nas respostas. As requisições são validadas com Bean Validation, incluindo a anotação `@CPF` do Hibernate Validator, dígitos verificadores de CNPJ, correspondência entre tipo e valor de chave Pix e limites para valores monetários. A aplicação exige um JWT emitido pelo Auth0 nas rotas REST, mas ainda não valida o audience configurado; portanto, a proteção está incompleta. Ainda faltam regras completas de negócio. A aplicação é um projeto em desenvolvimento e não deve ser usada em produção ou com dados financeiros reais.
 
 ## API REST
 
@@ -37,7 +37,76 @@ Os recursos disponíveis são:
 | Transferências Pix | `/transferencias-pix` |
 | Comprovantes | `/comprovantes` |
 
-Os corpos de cadastro e atualização são JSON com os campos das respectivas entidades. A documentação interativa do Swagger UI fica em `http://localhost:8080/swagger-ui/index.html`, e o documento OpenAPI em `http://localhost:8080/v3/api-docs`, após iniciar a aplicação. O Swagger UI e o documento OpenAPI podem ser abertos sem token; para executar operações da API pelo Swagger, use **Authorize** e informe um access token do Auth0.
+Os corpos de cadastro e atualização são JSON com os campos dos DTOs de requisição. Relacionamentos são informados por ID (`contaId`, `contaOrigemId`, `favorecidoId` e `transferenciaId`), e as respostas retornam esses IDs sem incluir entidades aninhadas. A senha é aceita no cadastro da conta, mas nunca aparece nas respostas.
+
+Exemplo de cadastro de conta:
+
+```json
+{
+  "nomeTitular": "Maria Silva",
+  "cpf": "529.982.247-25",
+  "banco": "Banco XPTO",
+  "agencia": "0001",
+  "numeroConta": "12345-6",
+  "senha": "senha-segura",
+  "saldo": 1500.50,
+  "limiteDiario": 1000.00
+}
+```
+
+O CPF pode ser enviado com pontuação ou apenas com os 11 dígitos, mas precisa ter dígitos verificadores válidos. Chaves Pix aceitam os tipos `CPF`, `CNPJ`, `EMAIL`, `TELEFONE` e `ALEATORIA`, e o valor deve corresponder ao tipo: telefone no formato internacional E.164 e chave aleatória como UUID v4. Valores de transferência devem ser positivos; saldos e limites não podem ser negativos. Campos obrigatórios ou formatos inválidos resultam em `400 Bad Request`, com os erros por campo no corpo da resposta. A documentação interativa do Swagger UI fica em `http://localhost:8080/swagger-ui/index.html`, e o documento OpenAPI em `http://localhost:8080/v3/api-docs`, após iniciar a aplicação. O Swagger UI e o documento OpenAPI podem ser abertos sem token; para executar operações da API pelo Swagger, use **Authorize** e informe um access token do Auth0.
+
+Exemplos de corpos para os demais recursos:
+
+`POST /chaves-pix` ou `PUT /chaves-pix/{id}`:
+
+```json
+{
+  "tipo": "CPF",
+  "valorChave": "529.982.247-25",
+  "contaId": 1,
+  "ativa": true
+}
+```
+
+`POST /favorecidos` ou `PUT /favorecidos/{id}`:
+
+```json
+{
+  "nome": "João Souza",
+  "banco": "Banco XPTO",
+  "chavePix": "joao@example.com",
+  "tipoChave": "EMAIL",
+  "contaOrigemId": 1
+}
+```
+
+`POST /transferencias-pix` ou `PUT /transferencias-pix/{id}`:
+
+```json
+{
+  "contaOrigemId": 1,
+  "favorecidoId": 1,
+  "valor": 250.00,
+  "descricao": "Pagamento",
+  "dataTransferencia": "2026-10-30",
+  "dataAgendamento": null,
+  "status": "PENDENTE"
+}
+```
+
+`POST /comprovantes` ou `PUT /comprovantes/{id}`:
+
+```json
+{
+  "transferenciaId": 1,
+  "codigoAutenticacao": "ABC123XYZ987",
+  "dataGeracao": "2026-10-30",
+  "status": "GERADO"
+}
+```
+
+Os campos `status` são texto livre no momento; a API ainda não impõe uma lista de estados permitidos. Os IDs enviados nos relacionamentos precisam existir, caso contrário a API retorna `404 Not Found`. O `numeroConta` deve ser único; tentar cadastrar ou atualizar uma conta com número já utilizado retorna `409 Conflict`. Em atualizações, envie o DTO completo do recurso.
 
 ### Auth0 e teste no Postman
 
@@ -65,7 +134,7 @@ O diagrama a seguir apresenta o modelo entidade-relacionamento do projeto e os v
 - PostgreSQL (banco configurado para execução)
 - H2 (dependência de runtime, não selecionada pela configuração atual)
 - Springdoc OpenAPI
-- Jakarta Bean Validation (dependência incluída; validações de entrada ainda não estão aplicadas)
+- Jakarta Bean Validation (validações de entrada com DTOs)
 - Lombok
 
 ## Configuração do banco de dados
@@ -77,12 +146,16 @@ O Hibernate está configurado com `ddl-auto=update`, que atualiza o esquema das 
 ## Estrutura do projeto
 
 - `controllers`: endpoints REST.
+- `dto/request` e `dto/response`: contratos de entrada e saída da API.
+- `validation`: validações customizadas de CPF e chaves Pix.
+- `exceptions`: tratamento padronizado de erros de validação e recursos inexistentes.
 - `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).
 - `repositories`: interfaces Spring Data JPA para persistência.
 - `services`: operações de acesso e manutenção das entidades.
 - `src/main/resources`: configuração da aplicação.
 - `src/test`: testes automatizados.
 - `MinpixApplication`: ponto de entrada Spring Boot.
+
 
 ## Pré-requisitos
 
@@ -114,13 +187,12 @@ Execute os testes com:
 ./mvnw test
 ```
 
-O teste existente verifica se o contexto Spring é carregado. Como a configuração de datasource aponta para PostgreSQL, o banco e as credenciais precisam estar disponíveis também durante a execução dos testes.
+Os testes verificam o carregamento do contexto Spring, as validações de DTO (incluindo CPF/chaves Pix), a ausência da senha na resposta da conta e a rejeição de números de conta duplicados. Como a configuração de datasource aponta para PostgreSQL, o banco e as credenciais precisam estar disponíveis também durante a execução dos testes.
 
 ## Limitações e próximos passos
 
 - Validar o audience dos tokens Auth0 e definir autorização por escopos/recursos.
 - Remover ou integrar corretamente o endpoint de login local ao fluxo de autenticação escolhido.
-- Criar DTOs e validação de entrada para não expor as entidades diretamente na API.
 - Implementar as regras de negócio da transferência Pix, incluindo saldo, limites, agendamento e atualização de status.
 - Externalizar as configurações e credenciais do banco e definir uma estratégia de migração do esquema.
 - Ampliar a cobertura de testes para os endpoints, validações e regras de negócio.
