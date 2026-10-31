@@ -1,5 +1,6 @@
 package com.example.minpix.models;
 
+import com.example.minpix.enums.StatusPixEnum;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -36,5 +37,7 @@ public class Comprovante {
     private LocalDate dataGeracao;
 
     @Schema(description = "Status do comprovante", example = "GERADO")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private StatusPixEnum status;
 }

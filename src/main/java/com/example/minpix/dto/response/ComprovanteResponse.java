@@ -1,6 +1,7 @@
 package com.example.minpix.dto.response;
 
 import com.example.minpix.models.Comprovante;
+import com.example.minpix.enums.StatusPixEnum;
 
 import java.time.LocalDate;
 
@@ -9,7 +10,7 @@ public record ComprovanteResponse(
         Long transferenciaId,
         String codigoAutenticacao,
         LocalDate dataGeracao,
-        String status
+        StatusPixEnum status
 ) {
 
     public static ComprovanteResponse from(Comprovante comprovante) {

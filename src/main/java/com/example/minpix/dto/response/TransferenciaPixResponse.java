@@ -1,5 +1,6 @@
 package com.example.minpix.dto.response;
 
+import com.example.minpix.enums.StatusPixEnum;
 import com.example.minpix.models.TransferenciaPix;
 
 import java.math.BigDecimal;
@@ -13,7 +14,7 @@ public record TransferenciaPixResponse(
         String descricao,
         LocalDate dataTransferencia,
         LocalDate dataAgendamento,
-        String status,
+        StatusPixEnum status,
         Long comprovanteId
 ) {
 

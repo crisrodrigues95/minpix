@@ -5,6 +5,7 @@ import com.example.minpix.dto.request.ComprovanteRequest;
 import com.example.minpix.dto.request.ContaRequest;
 import com.example.minpix.dto.request.FavorecidoRequest;
 import com.example.minpix.dto.request.TransferenciaPixRequest;
+import com.example.minpix.enums.StatusPixEnum;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -101,7 +102,7 @@ class ContaApiIntegrationTest {
                 "Pagamento de teste",
                 transferDate,
                 null,
-                "CONCLUIDA"
+                StatusPixEnum.CONCLUIDA
         ));
         mockMvc.perform(get("/transferencias-pix/{id}", transferenciaId).with(jwt()))
                 .andExpect(status().isOk())
@@ -120,7 +121,7 @@ class ContaApiIntegrationTest {
                                 "Pagamento atualizado",
                                 transferDate,
                                 null,
-                                "CONCLUIDA"
+                                StatusPixEnum.CONCLUIDA
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valor").value(30.75))
@@ -130,7 +131,7 @@ class ContaApiIntegrationTest {
                 transferenciaId,
                 "ABCD1234",
                 transferDate,
-                "GERADO"
+                StatusPixEnum.GERADO
         ));
         mockMvc.perform(get("/comprovantes/{id}", comprovanteId).with(jwt()))
                 .andExpect(status().isOk())
@@ -145,7 +146,7 @@ class ContaApiIntegrationTest {
                                 transferenciaId,
                                 "EFGH5678",
                                 transferDate,
-                                "ATUALIZADO"
+                                StatusPixEnum.ATUALIZADO
                         ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.codigoAutenticacao").value("EFGH5678"))

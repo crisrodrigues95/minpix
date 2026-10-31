@@ -1,8 +1,8 @@
 package com.example.minpix.dto.request;
 
+import com.example.minpix.enums.StatusPixEnum;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -17,6 +17,6 @@ public record TransferenciaPixRequest(
         @Size(max = 255) String descricao,
         LocalDate dataTransferencia,
         LocalDate dataAgendamento,
-        @NotBlank @Size(max = 30) String status
+        @NotNull StatusPixEnum status
 ) {
 }

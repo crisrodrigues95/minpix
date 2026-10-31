@@ -26,12 +26,12 @@ A aplicação é um projeto em desenvolvimento e não deve ser usada em produç�
 - Redução de exposição de dados sensíveis: as respostas de conta não retornam a senha.
 - Configuração de segurança exigindo autenticação JWT para todas as rotas, exceto documentação pública do Swagger/OpenAPI.
 - Validação customizada de chaves Pix com correspondência entre tipo e valor.
+- Domínio de status controlado pelo enum `StatusPixEnum` em [`src/main/java/com/example/minpix/enums`](src/main/java/com/example/minpix/enums), com valores pré-definidos e validação em runtime.
 - Testes de integração cobrindo criação, consulta, atualização, exclusão e autenticação de endpoints.
 
 ### Limitações conhecidas
 
 - As transferências Pix ainda são persistidas, mas não executam regras de negócio financeiras; elas não movimentam saldo, não validam limites nem processam agendamentos ou status automáticos.
-- O `status` dos registros de transferência/comprovante é tratado como texto livre e não há enum ou regra de domínio implementada.
 - O audience do token Auth0 não é validado explicitamente pelo `JwtDecoder`.
 - O endpoint `/auth/login` existe, mas não representa um fluxo de autenticação totalmente integrado ao Auth0 e continua sendo um ponto de atenção para a arquitetura de segurança.
 
@@ -140,7 +140,7 @@ Configuração atual:
 
 - `GET /swagger-ui/**` e `GET /v3/api-docs/**` ficam liberados.
 - Todos os demais endpoints exigem autenticação JWT.
-- O token deve ser enviado no cabeçalho `Authorization` no formato `Bearer <token>`.
+- O token deve ser enviado no cabeçalho `Authorization` no formato `Bearer <token>`. 
 - O `auth0.audience` foi configurado para uso em ambiente Auth0, mas o validador ainda não checa o audience do token de forma explícita.
 
 O endpoint `/auth/login` existe no backend, mas ainda não é um fluxo de login confiável e completo para uso com Auth0; ele foi mantido apenas como ponto de integração inicial para autenticação local/experimental.
@@ -186,9 +186,6 @@ O Hibernate usa `ddl-auto=update` em ambiente principal, e o SQL é exibido no l
 
 Para testes, o projeto usa `src/test/resources/application-test.properties`, com banco em memória H2 e `ddl-auto=create-drop`.
 
-## Dados de demonstração
-
-O arquivo [`scripts/seed-data.sql`](scripts/seed-data.sql) carrega dados fictícios de exemplo para contas, chaves Pix, favorecidos, transferências e comprovantes.
 
 Com PostgreSQL local, execute:
 
@@ -200,6 +197,7 @@ psql -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d banco_contas -f scri
 
 - `controllers`: endpoints REST.
 - `dto/request` e `dto/response`: contratos de entrada e saída da API.
+- `enums`: enums de domínio, como `StatusPixEnum`.
 - `validation`: validações customizadas de CPF e chaves Pix.
 - `exceptions`: tratamento de erros de negócio e validação.
 - `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).

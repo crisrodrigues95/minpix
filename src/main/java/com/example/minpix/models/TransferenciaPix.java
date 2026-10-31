@@ -1,13 +1,16 @@
 package com.example.minpix.models;
 
+import com.example.minpix.enums.StatusPixEnum;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -59,7 +62,9 @@ public class TransferenciaPix {
     private LocalDate dataAgendamento;
 
     @Schema(description = "Status da transferência", example = "CONCLUIDA")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private StatusPixEnum status;
 
     @JsonIgnore
     @Schema(description = "Comprovante da transferência")
