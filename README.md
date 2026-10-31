@@ -1,33 +1,53 @@
 # Minpix
 
-Minpix é uma aplicação Java com Spring Boot para cadastro e consulta de contas bancárias, chaves Pix, favorecidos, transferências Pix e comprovantes. O projeto disponibiliza uma API REST com operações CRUD para essas entidades.
+Minpix é uma API REST em Java com Spring Boot para gestão de contas, chaves Pix, favorecidos, transferências e comprovantes.
 
-## Situação atual
+## Visão geral
 
-Estão implementados:
+O projeto implementa um backend bancário de exemplo com:
 
-- Entidades JPA e repositórios Spring Data JPA para contas, chaves Pix, favorecidos, transferências Pix e comprovantes.
-- Serviços de persistência e controllers REST para listar, consultar por ID, cadastrar, atualizar e excluir registros.
-- Documentação OpenAPI/Swagger dos endpoints.
-- Cadastro de conta, chave Pix e favorecido com preenchimento automático da data de cadastro.
+- CRUD completo para contas, chaves Pix, favorecidos, transferências e comprovantes.
+- DTOs de entrada e saída para separar a camada HTTP da modelagem JPA.
+- Validações com Bean Validation para CPF, CNPJ, tipo/valor de chave Pix, valores monetários e campos obrigatórios.
+- Proteção de endpoints via Spring Security e OAuth2 Resource Server com JWT do Auth0.
+- Documentação OpenAPI/Swagger para consulta e testes manuais.
+- Testes de unidade, integração e validação de payloads.
 
-As operações de transferência Pix atualmente apenas persistem os dados informados: não movimentam saldo, verificam limites, executam agendamentos nem integram com a infraestrutura do Pix. Datas, status e relacionamentos de transferências e comprovantes precisam ser informados; não há regras gerais que os preencham automaticamente.
+A aplicação é um projeto em desenvolvimento e não deve ser usada em produção com dados financeiros reais.
 
-Os endpoints usam DTOs para entrada e saída, sem expor diretamente as entidades JPA nem a senha das contas nas respostas. As requisições são validadas com Bean Validation, incluindo a anotação `@CPF` do Hibernate Validator, dígitos verificadores de CNPJ, correspondência entre tipo e valor de chave Pix e limites para valores monetários. A aplicação exige um JWT emitido pelo Auth0 nas rotas REST, mas ainda não valida o audience configurado; portanto, a proteção está incompleta. Ainda faltam regras completas de negócio. A aplicação é um projeto em desenvolvimento e não deve ser usada em produção ou com dados financeiros reais.
+## Status atual
+
+### Funcionalidades implementadas
+
+- Entidades JPA e repositórios Spring Data JPA para todas as principais estruturas do domínio.
+- Services para criação, listagem, consulta, atualização e exclusão das entidades.
+- Controllers REST com endpoints para `/contas`, `/chaves-pix`, `/favorecidos`, `/transferencias-pix` e `/comprovantes`.
+- Tratamento centralizado de erros para recursos inexistentes, número de conta duplicado e validações de entrada.
+- Redução de exposição de dados sensíveis: as respostas de conta não retornam a senha.
+- Configuração de segurança exigindo autenticação JWT para todas as rotas, exceto documentação pública do Swagger/OpenAPI.
+- Validação customizada de chaves Pix com correspondência entre tipo e valor.
+- Testes de integração cobrindo criação, consulta, atualização, exclusão e autenticação de endpoints.
+
+### Limitações conhecidas
+
+- As transferências Pix ainda são persistidas, mas não executam regras de negócio financeiras; elas não movimentam saldo, não validam limites nem processam agendamentos ou status automáticos.
+- O `status` dos registros de transferência/comprovante é tratado como texto livre e não há enum ou regra de domínio implementada.
+- O audience do token Auth0 não é validado explicitamente pelo `JwtDecoder`.
+- O endpoint `/auth/login` existe, mas não representa um fluxo de autenticação totalmente integrado ao Auth0 e continua sendo um ponto de atenção para a arquitetura de segurança.
 
 ## API REST
 
-Todos os recursos abaixo oferecem:
+Todos os recursos suportam as operações padrão abaixo:
 
 | Operação | Método e caminho | Resposta esperada |
 |---|---|---|
-| Listar | `GET /{recurso}` | `200 OK` com a lista |
+| Listar | `GET /{recurso}` | `200 OK` com lista |
 | Consultar por ID | `GET /{recurso}/{id}` | `200 OK` ou `404 Not Found` |
 | Cadastrar | `POST /{recurso}` | `201 Created` |
 | Atualizar | `PUT /{recurso}/{id}` | `200 OK` ou `404 Not Found` |
 | Excluir | `DELETE /{recurso}/{id}` | `204 No Content` ou `404 Not Found` |
 
-Os recursos disponíveis são:
+Recursos disponíveis:
 
 | Recurso | Caminho |
 |---|---|
@@ -37,9 +57,9 @@ Os recursos disponíveis são:
 | Transferências Pix | `/transferencias-pix` |
 | Comprovantes | `/comprovantes` |
 
-Os corpos de cadastro e atualização são JSON com os campos dos DTOs de requisição. Relacionamentos são informados por ID (`contaId`, `contaOrigemId`, `favorecidoId` e `transferenciaId`), e as respostas retornam esses IDs sem incluir entidades aninhadas. A senha é aceita no cadastro da conta, mas nunca aparece nas respostas.
+### Exemplos de payloads
 
-Exemplo de cadastro de conta:
+Cadastro de conta:
 
 ```json
 {
@@ -54,11 +74,7 @@ Exemplo de cadastro de conta:
 }
 ```
 
-O CPF pode ser enviado com pontuação ou apenas com os 11 dígitos, mas precisa ter dígitos verificadores válidos. Chaves Pix aceitam os tipos `CPF`, `CNPJ`, `EMAIL`, `TELEFONE` e `ALEATORIA`, e o valor deve corresponder ao tipo: telefone no formato internacional E.164 e chave aleatória como UUID v4. Valores de transferência devem ser positivos; saldos e limites não podem ser negativos. Campos obrigatórios ou formatos inválidos resultam em `400 Bad Request`, com os erros por campo no corpo da resposta. A documentação interativa do Swagger UI fica em `http://localhost:8080/swagger-ui/index.html`, e o documento OpenAPI em `http://localhost:8080/v3/api-docs`, após iniciar a aplicação. O Swagger UI e o documento OpenAPI podem ser abertos sem token; para executar operações da API pelo Swagger, use **Authorize** e informe um access token do Auth0.
-
-Exemplos de corpos para os demais recursos:
-
-`POST /chaves-pix` ou `PUT /chaves-pix/{id}`:
+Chave Pix:
 
 ```json
 {
@@ -69,7 +85,7 @@ Exemplos de corpos para os demais recursos:
 }
 ```
 
-`POST /favorecidos` ou `PUT /favorecidos/{id}`:
+Favorecido:
 
 ```json
 {
@@ -81,7 +97,7 @@ Exemplos de corpos para os demais recursos:
 }
 ```
 
-`POST /transferencias-pix` ou `PUT /transferencias-pix/{id}`:
+Transferência Pix:
 
 ```json
 {
@@ -95,7 +111,7 @@ Exemplos de corpos para os demais recursos:
 }
 ```
 
-`POST /comprovantes` ou `PUT /comprovantes/{id}`:
+Comprovante:
 
 ```json
 {
@@ -106,21 +122,38 @@ Exemplos de corpos para os demais recursos:
 }
 ```
 
-Os campos `status` são texto livre no momento; a API ainda não impõe uma lista de estados permitidos. Os IDs enviados nos relacionamentos precisam existir, caso contrário a API retorna `404 Not Found`. O `numeroConta` deve ser único; tentar cadastrar ou atualizar uma conta com número já utilizado retorna `409 Conflict`. Em atualizações, envie o DTO completo do recurso.
+### Regras de validação importantes
 
-### Auth0 e teste no Postman
+- CPF aceita com ou sem máscara, desde que tenha dígitos verificadores válidos.
+- Chaves Pix aceitam `CPF`, `CNPJ`, `EMAIL`, `TELEFONE` e `ALEATORIA`.
+- O valor da chave deve corresponder ao tipo informado.
+- `valor`, `saldo` e `limiteDiario` devem ser positivos ou não negativos, conforme o caso, e respeitar a precisão monetária.
+- `numeroConta` deve ser único; a duplicidade retorna `409 Conflict`.
+- IDs de relacionamento devem existir; caso contrário, a API retorna `404 Not Found`.
+- Campos obrigatórios ou inválidos geram `400 Bad Request` com erros por campo.
 
-1. No Auth0, registre uma API e configure seu **Identifier**. O valor deve corresponder a `auth0.audience` em `application.properties`.
-2. Crie ou selecione uma aplicação **Machine to Machine** e autorize-a a acessar essa API.
-3. Configure `spring.security.oauth2.resourceserver.jwt.issuer-uri` com o domínio do tenant Auth0, incluindo `https://` e a barra final. Não use o Client ID, Client Secret ou o Identifier da API nesse campo.
-4. No Postman, solicite um token com o fluxo **Client Credentials**. Use `https://SEU-DOMINIO/oauth/token` como URL do token, as credenciais da aplicação M2M e o Identifier da API como **Audience**. Mantenha o Client Secret fora do repositório.
-5. Envie o `access_token` como **Bearer Token** em uma chamada, por exemplo `GET http://localhost:8080/contas`.
+## Segurança e autenticação
 
-**Limitação da configuração atual:** `auth0.audience` está definido, mas não é usado pelo `JwtDecoder`; o código valida o emissor/assinatura, mas não confirma se o token foi emitido para o Identifier desta API. Além disso, `POST /auth/login` exige autenticação e emite um JWT local que não é aceito pelo validador configurado para Auth0. Portanto, esse endpoint não é atualmente um fluxo de login utilizável.
+A aplicação usa Spring Security com OAuth2 Resource Server e um `JwtDecoder` configurado com `issuer-uri` do Auth0.
+
+Configuração atual:
+
+- `GET /swagger-ui/**` e `GET /v3/api-docs/**` ficam liberados.
+- Todos os demais endpoints exigem autenticação JWT.
+- O token deve ser enviado no cabeçalho `Authorization` no formato `Bearer <token>`.
+- O `auth0.audience` foi configurado para uso em ambiente Auth0, mas o validador ainda não checa o audience do token de forma explícita.
+
+O endpoint `/auth/login` existe no backend, mas ainda não é um fluxo de login confiável e completo para uso com Auth0; ele foi mantido apenas como ponto de integração inicial para autenticação local/experimental.
+
+### Exemplo de teste no Postman
+
+1. Registre uma API no Auth0 e configure o `Identifier` para corresponder ao valor de `auth0.audience` em [`application.properties`](src/main/resources/application.properties).
+2. Crie uma aplicação do tipo **Machine to Machine** e conceda acesso à API.
+3. Configure `spring.security.oauth2.resourceserver.jwt.issuer-uri` com o domínio do tenant Auth0, incluindo `https://` e a barra final.
+4. Solicite um token via **Client Credentials** em `https://SEU-DOMINIO/oauth/token`.
+5. Envie o `access_token` no cabeçalho `Authorization` como `Bearer <token>` em chamadas para `http://localhost:8080/contas`.
 
 ## Modelo de dados
-
-O diagrama a seguir apresenta o modelo entidade-relacionamento do projeto e os vínculos entre contas, chaves Pix, favorecidos, transferências e comprovantes.
 
 ![Diagrama entidade-relacionamento do Minpix](docs/MER.png)
 
@@ -130,40 +163,60 @@ O diagrama a seguir apresenta o modelo entidade-relacionamento do projeto e os v
 - Spring Boot 4.1.2
 - Maven
 - Spring Web
-- Spring Data JPA e Hibernate
-- PostgreSQL (banco configurado para execução)
-- H2 (dependência de runtime, não selecionada pela configuração atual)
-- Springdoc OpenAPI
-- Jakarta Bean Validation (validações de entrada com DTOs)
+- Spring Data JPA + Hibernate
+- PostgreSQL (execução local)
+- H2 (perfil de testes)
+- Springdoc OpenAPI / Swagger UI
+- Jakarta Bean Validation
 - Lombok
+- Spring Security + OAuth2 Resource Server
 
 ## Configuração do banco de dados
 
-A configuração em [`application.properties`](src/main/resources/application.properties) aponta para um PostgreSQL local, na porta `5432`, com o banco `banco_contas`. Antes de executar a aplicação ou os testes, inicie o PostgreSQL, crie esse banco e configure credenciais válidas no arquivo de propriedades. Não publique senhas ou outras credenciais no repositório.
+A aplicação principal usa PostgreSQL local em `localhost:5432`, banco `banco_contas`, conforme [`application.properties`](src/main/resources/application.properties).
 
-O Hibernate está configurado com `ddl-auto=update`, que atualiza o esquema das tabelas durante a inicialização. O SQL também é exibido no log. Essa configuração é conveniente durante o desenvolvimento, mas deve ser revista antes de qualquer implantação.
+Antes de executar a aplicação:
+
+1. Inicie o PostgreSQL.
+2. Crie o banco `banco_contas`.
+3. Configure as credenciais do datasource no arquivo de propriedades.
+4. Não versionar senhas e segredos no repositório.
+
+O Hibernate usa `ddl-auto=update` em ambiente principal, e o SQL é exibido no log.
+
+Para testes, o projeto usa `src/test/resources/application-test.properties`, com banco em memória H2 e `ddl-auto=create-drop`.
+
+## Dados de demonstração
+
+O arquivo [`scripts/seed-data.sql`](scripts/seed-data.sql) carrega dados fictícios de exemplo para contas, chaves Pix, favorecidos, transferências e comprovantes.
+
+Com PostgreSQL local, execute:
+
+```bash
+psql -v ON_ERROR_STOP=1 -h localhost -p 5432 -U postgres -d banco_contas -f scripts/seed-data.sql
+```
 
 ## Estrutura do projeto
 
 - `controllers`: endpoints REST.
 - `dto/request` e `dto/response`: contratos de entrada e saída da API.
 - `validation`: validações customizadas de CPF e chaves Pix.
-- `exceptions`: tratamento padronizado de erros de validação e recursos inexistentes.
+- `exceptions`: tratamento de erros de negócio e validação.
 - `models`: entidades JPA (`Conta`, `ChavePix`, `Favorecido`, `TransferenciaPix` e `Comprovante`).
-- `repositories`: interfaces Spring Data JPA para persistência.
-- `services`: operações de acesso e manutenção das entidades.
+- `repositories`: interfaces Spring Data JPA.
+- `services`: regras e operações de persistência.
+- `config`: configuração de segurança, JWT e documentação.
 - `src/main/resources`: configuração da aplicação.
 - `src/test`: testes automatizados.
-- `MinpixApplication`: ponto de entrada Spring Boot.
-
+- `MinpixApplication`: ponto de entrada da aplicação.
 
 ## Pré-requisitos
 
-- JDK 21 ou superior.
-- PostgreSQL local configurado conforme a seção anterior.
-- Maven instalado, ou use o Maven Wrapper incluído no projeto.
+- JDK 21+
+- PostgreSQL local configurado para execução principal
+- Maven ou Maven Wrapper
 
-## Executar
+## Executar a aplicação
 
 Na raiz do projeto:
 
@@ -171,28 +224,42 @@ Na raiz do projeto:
 ./mvnw spring-boot:run
 ```
 
-Ou, com Maven instalado:
+Ou:
 
 ```bash
 mvn spring-boot:run
 ```
 
-A aplicação usa a porta padrão `8080`, salvo configuração diferente.
+A aplicação usa a porta padrão `8080`.
+
+## Documentação interativa
+
+Após iniciar a aplicação:
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
 ## Testes
 
-Execute os testes com:
+Execute a suíte de testes com:
 
 ```bash
 ./mvnw test
 ```
 
-Os testes verificam o carregamento do contexto Spring, as validações de DTO (incluindo CPF/chaves Pix), a ausência da senha na resposta da conta e a rejeição de números de conta duplicados. Como a configuração de datasource aponta para PostgreSQL, o banco e as credenciais precisam estar disponíveis também durante a execução dos testes.
+Os testes cobrem:
 
-## Limitações e próximos passos
+- carregamento do contexto Spring,
+- validações de DTO,
+- regras de integração,
+- ausência da senha nas respostas de conta,
+- rejeição de número de conta duplicado,
+- autenticação de endpoints protegidos.
 
-- Validar o audience dos tokens Auth0 e definir autorização por escopos/recursos.
-- Remover ou integrar corretamente o endpoint de login local ao fluxo de autenticação escolhido.
-- Implementar as regras de negócio da transferência Pix, incluindo saldo, limites, agendamento e atualização de status.
-- Externalizar as configurações e credenciais do banco e definir uma estratégia de migração do esquema.
-- Ampliar a cobertura de testes para os endpoints, validações e regras de negócio.
+## Próximos passos
+
+- Validar o `audience` dos tokens Auth0 e definir autorização por escopo/recurso.
+- Consolidar a autenticação em um fluxo único e seguro para login e acesso à API.
+- Implementar regras reais de transferência Pix, incluindo saldo, limites, agendamento e atualização de status.
+- Externalizar credenciais e configurar estratégias de segurança e migração de dados para ambientes de produção.
+- Expandir cobertura de testes para regras de negócio e fluxos completos de integração.

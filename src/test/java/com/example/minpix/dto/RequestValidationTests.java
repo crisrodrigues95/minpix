@@ -80,6 +80,94 @@ class RequestValidationTests {
     }
 
     @Test
+    void rejectsBlankRequiredAccountFields() {
+        assertInvalidAccountField(new ContaRequest(
+                " ", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "nomeTitular");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", " ", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "cpf");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", " ", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "banco");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", " ", "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "agencia");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", " ",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "numeroConta");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                " ", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "senha");
+    }
+
+    @Test
+    void rejectsAccountFieldsThatExceedTheirMaximumLengths() {
+        assertInvalidAccountField(new ContaRequest(
+                "N".repeat(121), "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "nomeTitular");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "B".repeat(101), "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "banco");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "A".repeat(31), "12345-6",
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "agencia");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "C".repeat(31),
+                "senha-segura", BigDecimal.ZERO, BigDecimal.ZERO
+        ), "numeroConta");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "S".repeat(73), BigDecimal.ZERO, BigDecimal.ZERO
+        ), "senha");
+    }
+
+    @Test
+    void rejectsInvalidAccountAmounts() {
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", null, BigDecimal.ZERO
+        ), "saldo");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", new BigDecimal("-0.01"), BigDecimal.ZERO
+        ), "saldo");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", new BigDecimal("1000000000000000"), BigDecimal.ZERO
+        ), "saldo");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", new BigDecimal("1.001"), BigDecimal.ZERO
+        ), "saldo");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, null
+        ), "limiteDiario");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, new BigDecimal("-0.01")
+        ), "limiteDiario");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, new BigDecimal("1000000000000000")
+        ), "limiteDiario");
+        assertInvalidAccountField(new ContaRequest(
+                "Maria Silva", "529.982.247-25", "Banco XPTO", "0001", "12345-6",
+                "senha-segura", BigDecimal.ZERO, new BigDecimal("1.001")
+        ), "limiteDiario");
+    }
+
+    @Test
     void validatesPixKeyValueAgainstItsDeclaredType() {
         assertTrue(validator.validate(new ChavePixRequest("CPF", "52998224725", 1L, true)).isEmpty());
         assertTrue(validator.validate(new ChavePixRequest("CNPJ", "11.222.333/0001-81", 1L, true)).isEmpty());
@@ -118,5 +206,11 @@ class RequestValidationTests {
 
         assertFalse(json.has("senha"));
         assertTrue(json.has("numeroConta"));
+    }
+
+    private void assertInvalidAccountField(ContaRequest request, String field) {
+        assertTrue(validator.validate(request).stream()
+                .anyMatch(error -> error.getPropertyPath().toString().equals(field)),
+                () -> "Expected validation error for field: " + field);
     }
 }
